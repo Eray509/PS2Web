@@ -4,8 +4,8 @@
 .bar {
   position: absolute; top: 0; left: 0; right: 0; height: 56px;
   display: flex; align-items: center; gap: 10px; padding: 0 16px;
-  background: linear-gradient(180deg, rgba(8,10,22,.92), rgba(8,10,22,.55));
-  backdrop-filter: blur(8px);
+  background: linear-gradient(180deg, rgba(8,10,22,.94), rgba(8,10,22,.7));
+  transition: transform .2s ease, opacity .2s ease;
   border-bottom: 1px solid var(--line);
   z-index: 5;
 }
@@ -80,7 +80,7 @@
 .panel {
   position: absolute; top: 68px; right: 16px; width: min(340px, calc(100% - 32px));
   padding: 16px; border-radius: 16px; z-index: 7;
-  background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(10px);
+  background: var(--panel); border: 1px solid var(--line);
   box-shadow: 0 20px 60px rgba(0,0,0,.5);
 }
 .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
@@ -103,7 +103,7 @@ kbd {
 
 .drop {
   position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
-  background: rgba(8,10,22,.78); backdrop-filter: blur(4px);
+  background: rgba(8,10,22,.78);
 }
 .drop-box {
   padding: 48px 64px; border-radius: 24px; border: 2px dashed var(--accent);
@@ -118,3 +118,7 @@ kbd {
 
 .row.col { flex-direction: column; align-items: stretch; gap: 8px; }
 .row input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+/* Während des Spiels: Leiste blendet sich bei Inaktivität aus, das Spiel nutzt die ganze Fläche. */
+#app[data-playing="1"][data-idle="1"] .bar { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+#app[data-playing="1"][data-idle="1"] { cursor: none; }

@@ -49,6 +49,7 @@ function App() {
   const [fullscreen, setFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [idle, setIdle] = useState(false);
   const dragDepth = useRef(0);
 
   const ready = PlayModule !== null;
@@ -77,6 +78,39 @@ function App() {
       PlayModule.setAudioPrebuffer(settings.audioBuffer);
     }
   }, [settings.audioBuffer, ready]);
+
+  // Leiste und Mauszeiger blenden sich im Spiel nach 3 Sekunden ohne Bewegung aus.
+  const playingNow = gameName !== null && !loadFailed;
+  useEffect(() => {
+    const app = document.getElementById("app");
+    if (app) {
+      app.dataset.playing = playingNow ? "1" : "0";
+      app.dataset.idle = playingNow && idle && panel === null ? "1" : "0";
+    }
+  }, [playingNow, idle, panel]);
+
+  useEffect(() => {
+    if (!playingNow) {
+      setIdle(false);
+      return;
+    }
+    let timer = 0;
+    const wake = () => {
+      setIdle((current) => (current ? false : current));
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setIdle(true), 3000);
+    };
+    wake();
+    window.addEventListener("mousemove", wake);
+    window.addEventListener("mousedown", wake);
+    window.addEventListener("touchstart", wake);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("mousemove", wake);
+      window.removeEventListener("mousedown", wake);
+      window.removeEventListener("touchstart", wake);
+    };
+  }, [playingNow]);
 
   // Gamepad -> Tasten.
   useEffect(() => {
