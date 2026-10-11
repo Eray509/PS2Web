@@ -9,4 +9,7 @@ if grep -q "INITIAL_MEMORY" "$FILE"; then
   echo "bereits angewendet"; exit 0
 fi
 sed -i 's|^target_link_options(Play PRIVATE "-sALLOW_MEMORY_GROWTH")|&\ntarget_link_options(Play PRIVATE "-sINITIAL_MEMORY=536870912")|' "$FILE"
-grep -n "INITIAL_MEMORY" "$FILE"
+# Mehr Worker-Threads vorab anlegen: Threads, die erst zur Laufzeit entstehen, brauchen den Hauptthread
+# und können beim Start oder bei Szenenwechseln kurz haken.
+sed -i 's|-sPTHREAD_POOL_SIZE=2|-sPTHREAD_POOL_SIZE=6|' "$FILE"
+grep -n "INITIAL_MEMORY\|PTHREAD_POOL_SIZE" "$FILE"
