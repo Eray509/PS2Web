@@ -37,7 +37,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ninja-build
 
       - name: Performance-Optionen
-        run: ./scripts/apply-perf-tweaks.sh Play-
+        run: bash ./scripts/apply-perf-tweaks.sh Play-
 
       - name: WebAssembly bauen
         working-directory: Play-
