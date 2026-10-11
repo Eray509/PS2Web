@@ -62,7 +62,7 @@ jobs:
           npm install --no-save coi-serviceworker
           cp node_modules/coi-serviceworker/coi-serviceworker.min.js public/
           sed -i 's#<head>#<head>\n    <script src="coi-serviceworker.min.js"></script>#' public/index.html
-          PUBLIC_URL=. npm run build
+          DISABLE_ESLINT_PLUGIN=true PUBLIC_URL=. npm run build
 
       - uses: actions/upload-pages-artifact@v3
         with:
