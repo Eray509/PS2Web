@@ -45,6 +45,9 @@ jobs:
       - name: Dauerhaftes Speichern (IDBFS)
         run: python3 ./scripts/apply-persistence-patch.py Play-
 
+      - name: Ton-Puffer
+        run: python3 ./scripts/apply-audio-patch.py Play-
+
       - name: WebAssembly bauen
         working-directory: Play-
         run: |
