@@ -1,6 +1,6 @@
 import './App.css';
 import { ChangeEvent, DragEvent, useCallback, useEffect, useRef, useState } from 'react';
-import { PlayModule } from './PlayModule';
+import { PlayModule, saveNow } from './PlayModule';
 import { useAppDispatch, useAppSelector, bootFile } from "./Actions";
 import { resumeAudio } from './audioUnlock';
 import { startGamepad, GamepadStatus } from './gamepad';
@@ -172,6 +172,9 @@ function App() {
           <span className={"pill fps " + fpsClass} title="Bilder pro Sekunde">{fps} FPS</span>
         )}
         {gamepad.connected && <span className="pill pad" title={gamepad.name}>🎮 Controller</span>}
+        {playing && ready && PlayModule.persistActive && (
+          <span className="pill pad" title="Spielstände werden automatisch in diesem Browser gespeichert">💾 Autospeichern</span>
+        )}
         <button className="btn" onClick={() => inputRef.current?.click()} disabled={!ready}>
           {playing ? "Anderes Spiel" : "Spiel laden"}
         </button>
@@ -263,6 +266,14 @@ function App() {
               onChange={(e) => setSettings({ ...settings, showFps: e.target.checked })}
             />
           </label>
+          <p className="note">
+            {ready && PlayModule.persistActive
+              ? "Spielstände (Memory Card) werden automatisch alle paar Sekunden in diesem Browser gespeichert. Speichere im Spiel wie gewohnt und warte danach kurz, bevor du den Tab schließt. Löschst du die Browserdaten, sind sie weg."
+              : "Dauerhaftes Speichern ist in diesem Browser gerade nicht aktiv. Spielstände gehen beim Neuladen verloren."}
+          </p>
+          {ready && PlayModule.persistActive && (
+            <button className="btn ghost" onClick={() => { saveNow(); }}>Jetzt sichern</button>
+          )}
           <button className="btn ghost" onClick={() => setSettings(defaultSettings)}>Zurücksetzen</button>
         </aside>
       )}
