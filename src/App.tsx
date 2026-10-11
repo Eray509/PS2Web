@@ -64,12 +64,12 @@ function App() {
     saveSettings(settings);
   }, [settings]);
 
-  // Flimmer-Glättung an den Emulator weitergeben (nur vorhanden, wenn er mit dem Patch gebaut wurde).
+  // Bildversatz gegen das Wackeln an den Emulator weitergeben (nur vorhanden, wenn er mit dem Patch gebaut wurde).
   useEffect(() => {
-    if (PlayModule && typeof PlayModule.setDeinterlace === "function") {
-      PlayModule.setDeinterlace(settings.deinterlace / 100);
+    if (PlayModule && typeof PlayModule.setFieldShift === "function") {
+      PlayModule.setFieldShift(settings.fieldShift);
     }
-  }, [settings.deinterlace, ready]);
+  }, [settings.fieldShift, ready]);
 
   // Gamepad -> Tasten.
   useEffect(() => {
@@ -135,6 +135,16 @@ function App() {
     const file = event.dataTransfer.files && event.dataTransfer.files[0];
     if (file) {
       start(file);
+    }
+  };
+
+  const recordDiagnostics = () => {
+    if (PlayModule && typeof PlayModule.logFlips === "function") {
+      PlayModule.logFlips(120);
+      setError("Aufzeichnung läuft. Öffne mit F12 die Konsole und kopiere die Zeilen „FLIP #…“.");
+      setTimeout(focusCanvas, 50);
+    } else {
+      setError("Diagnose ist in diesem Emulator-Build nicht enthalten.");
     }
   };
 
@@ -247,17 +257,19 @@ function App() {
             />
           </label>
           <label className="row col">
-            <span>Flimmer-Glättung: {settings.deinterlace === 0 ? "aus" : settings.deinterlace + " %"}</span>
+            <span>Wackel-Ausgleich: {settings.fieldShift === 0 ? "aus" : settings.fieldShift + " px"}</span>
             <input
               type="range"
-              min={0}
-              max={80}
-              step={5}
-              value={settings.deinterlace}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setSettings({ ...settings, deinterlace: Number(e.target.value) })}
+              min={-4}
+              max={4}
+              step={1}
+              value={settings.fieldShift}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setSettings({ ...settings, fieldShift: Number(e.target.value) })}
             />
           </label>
-          <p className="note">Gegen das schnelle Auf-und-ab-Wackeln (z. B. GTA San Andreas). Höher = ruhiger, aber leichtes Nachziehen bei Bewegung. Wirkt nur bei Spielen mit Interlace-Ausgabe.</p>
+          <p className="note">Gegen das schnelle Auf-und-ab-Wackeln (z. B. GTA San Andreas). Verschiebt jedes zweite Bild um die gewählten Pixel. Probiere während das Spiel läuft -2, -1, 1 und 2 aus. Der richtige Wert macht das Bild ruhig, der falsche verstärkt das Wackeln.</p>
+          <button className="btn ghost" onClick={recordDiagnostics}>Diagnose aufzeichnen</button>
+          <p className="note">Schreibt die Anzeigedaten von 120 Bildern in die Browser-Konsole (F12 → Konsole). Kopiere die Zeilen „FLIP #…“ und schick sie mir, falls das Wackeln bleibt.</p>
           <label className="row">
             <span>FPS anzeigen</span>
             <input
