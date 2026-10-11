@@ -51,8 +51,21 @@ jobs:
       - name: WebAssembly bauen
         working-directory: Play-
         run: |
-          emcmake cmake --preset wasm-ninja
-          cmake --build --preset wasm-ninja-release --target Play
+          build() {
+            emcmake cmake --preset wasm-ninja
+            cmake --build --preset wasm-ninja-release --target Play
+          }
+          # Erst mit zusätzlichen Geschwindigkeits-Optionen (SIMD, Link-Time-Optimierung) versuchen.
+          # Schlägt das fehl, wird automatisch ohne diese Optionen neu gebaut.
+          export CFLAGS="-msimd128 -flto" CXXFLAGS="-msimd128 -flto" LDFLAGS="-flto"
+          if build; then
+            echo "Mit Geschwindigkeits-Optionen gebaut."
+          else
+            echo "::warning::Bau mit Geschwindigkeits-Optionen fehlgeschlagen, baue ohne."
+            unset CFLAGS CXXFLAGS LDFLAGS
+            rm -rf build_cmake/build/wasm-ninja
+            build
+          fi
 
       - uses: actions/setup-node@v4
         with:
