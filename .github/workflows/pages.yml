@@ -39,6 +39,9 @@ jobs:
       - name: Performance-Optionen
         run: bash ./scripts/apply-perf-tweaks.sh Play-
 
+      - name: Flimmer-Glättung (Interlace)
+        run: python3 ./scripts/apply-deinterlace-patch.py Play-
+
       - name: WebAssembly bauen
         working-directory: Play-
         run: |
