@@ -3,11 +3,12 @@ export type Settings = {
     smooth: boolean;
     showFps: boolean;
     fieldShift: number; // -4..4 Pixel, 0 = aus
+    audioBuffer: number; // 1..8 Tonstücke (je ca. 100 ms), 1 = wie vorher
 };
 
 const KEY = "ps2web.settings.v1";
 
-export const defaultSettings: Settings = { aspect: "4:3", smooth: true, showFps: true, fieldShift: 0 };
+export const defaultSettings: Settings = { aspect: "4:3", smooth: true, showFps: true, fieldShift: 0, audioBuffer: 3 };
 
 export function loadSettings(): Settings {
     try {

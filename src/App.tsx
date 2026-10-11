@@ -71,6 +71,13 @@ function App() {
     }
   }, [settings.fieldShift, ready]);
 
+  // Ton-Puffer an den Emulator weitergeben (nur vorhanden, wenn er mit dem Patch gebaut wurde).
+  useEffect(() => {
+    if (PlayModule && typeof PlayModule.setAudioPrebuffer === "function") {
+      PlayModule.setAudioPrebuffer(settings.audioBuffer);
+    }
+  }, [settings.audioBuffer, ready]);
+
   // Gamepad -> Tasten.
   useEffect(() => {
     const canvas = document.getElementById("outputCanvas") as HTMLCanvasElement | null;
@@ -270,6 +277,18 @@ function App() {
           <p className="note">Gegen das schnelle Auf-und-ab-Wackeln (z. B. GTA San Andreas). Verschiebt jedes zweite Bild um die gewählten Pixel. Probiere während das Spiel läuft -2, -1, 1 und 2 aus. Der richtige Wert macht das Bild ruhig, der falsche verstärkt das Wackeln.</p>
           <button className="btn ghost" onClick={recordDiagnostics}>Diagnose aufzeichnen</button>
           <p className="note">Schreibt die Anzeigedaten von 120 Bildern in die Browser-Konsole (F12 → Konsole). Kopiere die Zeilen „FLIP #…“ und schick sie mir, falls das Wackeln bleibt.</p>
+          <label className="row col">
+            <span>Ton-Puffer: {settings.audioBuffer === 1 ? "aus" : "ca. " + settings.audioBuffer * 100 + " ms"}</span>
+            <input
+              type="range"
+              min={1}
+              max={8}
+              step={1}
+              value={settings.audioBuffer}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setSettings({ ...settings, audioBuffer: Number(e.target.value) })}
+            />
+          </label>
+          <p className="note">Gegen Ruckeln und Knacken beim Ton. Höher = stabiler, aber der Ton kommt später. Bei Ruckeln erhöhen, bei Spielen mit Takt oder Rhythmus eher niedrig lassen. Wirkt ab dem nächsten Neustart des Tons (Spiel kurz pausieren oder neu laden). Bleibt der Ton trotzdem unruhig, schau auf die FPS-Anzeige: Unter 60 ist die Emulation selbst zu langsam, das kann der Puffer nicht beheben.</p>
           <label className="row">
             <span>FPS anzeigen</span>
             <input
