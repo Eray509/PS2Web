@@ -115,3 +115,6 @@ kbd {
   .bar { gap: 6px; padding: 0 8px; overflow-x: auto; }
   .btn { padding: 8px 10px; font-size: 13px; white-space: nowrap; }
 }
+
+.row.col { flex-direction: column; align-items: stretch; gap: 8px; }
+.row input[type="range"] { width: 100%; accent-color: var(--accent); }

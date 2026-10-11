@@ -64,6 +64,13 @@ function App() {
     saveSettings(settings);
   }, [settings]);
 
+  // Flimmer-Glättung an den Emulator weitergeben (nur vorhanden, wenn er mit dem Patch gebaut wurde).
+  useEffect(() => {
+    if (PlayModule && typeof PlayModule.setDeinterlace === "function") {
+      PlayModule.setDeinterlace(settings.deinterlace / 100);
+    }
+  }, [settings.deinterlace, ready]);
+
   // Gamepad -> Tasten.
   useEffect(() => {
     const canvas = document.getElementById("outputCanvas") as HTMLCanvasElement | null;
@@ -236,6 +243,18 @@ function App() {
               onChange={(e) => setSettings({ ...settings, smooth: e.target.checked })}
             />
           </label>
+          <label className="row col">
+            <span>Flimmer-Glättung: {settings.deinterlace === 0 ? "aus" : settings.deinterlace + " %"}</span>
+            <input
+              type="range"
+              min={0}
+              max={80}
+              step={5}
+              value={settings.deinterlace}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setSettings({ ...settings, deinterlace: Number(e.target.value) })}
+            />
+          </label>
+          <p className="note">Gegen das schnelle Auf-und-ab-Wackeln (z. B. GTA San Andreas). Höher = ruhiger, aber leichtes Nachziehen bei Bewegung. Wirkt nur bei Spielen mit Interlace-Ausgabe.</p>
           <label className="row">
             <span>FPS anzeigen</span>
             <input

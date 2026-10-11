@@ -2,11 +2,12 @@ export type Settings = {
     aspect: "4:3" | "16:9";
     smooth: boolean;
     showFps: boolean;
+    deinterlace: number; // 0..80 (Prozent), 0 = aus
 };
 
 const KEY = "ps2web.settings.v1";
 
-export const defaultSettings: Settings = { aspect: "4:3", smooth: true, showFps: true };
+export const defaultSettings: Settings = { aspect: "4:3", smooth: true, showFps: true, deinterlace: 35 };
 
 export function loadSettings(): Settings {
     try {
