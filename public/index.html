@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0a0c1a" />
+    <meta name="description" content="PlayStation 2 im Browser (WebAssembly)" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <title>PS2 Web</title>
+  </head>
+  <body>
+    <noscript>Für diese Seite wird JavaScript benötigt.</noscript>
+    <div id="app">
+      <!-- Das Canvas muss statisch im HTML stehen: der Emulator sucht es per ID beim Start. -->
+      <div id="stage">
+        <canvas id="outputCanvas" width="640" height="480" tabindex="-1"></canvas>
+      </div>
+      <div id="root"></div>
+    </div>
+  </body>
+</html>

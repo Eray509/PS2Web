@@ -1,0 +1,79 @@
+# Baut den Emulator (Play!) nach WebAssembly, baut dieses Frontend dazu und veröffentlicht alles auf GitHub Pages.
+# Einrichtung: Repo -> Settings -> Pages -> Source: "GitHub Actions". Dann Actions -> "PS2 Web veröffentlichen" -> Run workflow.
+name: PS2 Web veröffentlichen
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dieses Repo
+        uses: actions/checkout@v4
+
+      - name: Emulator-Quellcode (Play!)
+        uses: actions/checkout@v4
+        with:
+          repository: jpd002/Play-
+          path: Play-
+          submodules: recursive
+
+      - name: Emscripten
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: 4.0.1
+
+      - name: Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Performance-Optionen
+        run: ./scripts/apply-perf-tweaks.sh Play-
+
+      - name: WebAssembly bauen
+        working-directory: Play-
+        run: |
+          emcmake cmake --preset wasm-ninja
+          cmake --build --preset wasm-ninja-release --target Play
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Frontend bauen
+        run: |
+          OUT=Play-/build_cmake/build/wasm-ninja/Source/ui_js/Release
+          cp $OUT/Play.js src/
+          cp $OUT/Play.js public/
+          cp $OUT/Play.wasm public/
+          if [ -f $OUT/Play.worker.js ]; then cp $OUT/Play.worker.js public/; fi
+          npm install
+          # GitHub Pages sendet keine COOP/COEP-Header, die der Emulator (Threads) braucht.
+          # Ein Service Worker setzt sie nach.
+          npm install --no-save coi-serviceworker
+          cp node_modules/coi-serviceworker/coi-serviceworker.min.js public/
+          sed -i 's#<head>#<head>\n    <script src="coi-serviceworker.min.js"></script>#' public/index.html
+          PUBLIC_URL=. npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
