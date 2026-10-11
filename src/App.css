@@ -122,3 +122,70 @@ kbd {
 /* Während des Spiels: Leiste blendet sich bei Inaktivität aus, das Spiel nutzt die ganze Fläche. */
 #app[data-playing="1"][data-idle="1"] .bar { transform: translateY(-100%); opacity: 0; pointer-events: none; }
 #app[data-playing="1"][data-idle="1"] { cursor: none; }
+
+/* ---------- Bildschirm-Steuerung (Touch) ---------- */
+.touch-layer {
+  position: absolute; inset: 0; z-index: 6; pointer-events: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none;
+  --t-bg: rgba(255,255,255,.12); --t-line: rgba(255,255,255,.35); --t-on: rgba(91,124,255,.65);
+}
+.touch-layer > * { pointer-events: auto; touch-action: none; }
+
+.t-shoulders { position: absolute; top: calc(env(safe-area-inset-top) + 14px); display: flex; gap: 10px; }
+.t-sh-left { left: calc(env(safe-area-inset-left) + 20px); }
+.t-sh-right { right: calc(env(safe-area-inset-right) + 20px); }
+
+.t-btn {
+  display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff;
+  background: var(--t-bg); border: 2px solid var(--t-line); -webkit-tap-highlight-color: transparent;
+}
+.t-btn.on { background: var(--t-on); }
+.t-btn.pill-btn { min-width: 74px; height: 46px; padding: 0 14px; border-radius: 14px; font-size: 16px; }
+.t-btn.pill-btn.small { min-width: 80px; height: 36px; font-size: 14px; }
+
+.t-menu {
+  position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 50%; transform: translateX(-50%);
+  width: 52px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 20px; background: rgba(0,0,0,.35); border: 1px solid var(--t-line);
+}
+
+.t-pos { position: absolute; }
+.t-dpad-pos { left: calc(env(safe-area-inset-left) + 28px); bottom: calc(env(safe-area-inset-bottom) + 200px); }
+.t-lstick-pos { left: calc(env(safe-area-inset-left) + 24px); bottom: calc(env(safe-area-inset-bottom) + 24px); }
+.t-rstick-pos { right: calc(env(safe-area-inset-right) + 24px); bottom: calc(env(safe-area-inset-bottom) + 24px); }
+.t-face-pos {
+  right: calc(env(safe-area-inset-right) + 28px); bottom: calc(env(safe-area-inset-bottom) + 190px);
+  width: 160px; height: 160px;
+}
+
+.t-stick, .t-dpad { position: relative; border-radius: 50%; background: var(--t-bg); border: 2px solid var(--t-line); touch-action: none; }
+.t-stick { width: 150px; height: 150px; }
+.t-dpad { width: 130px; height: 130px; }
+.t-thumb {
+  position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.7); font-weight: 700;
+  background: rgba(255,255,255,.25); border: 2px solid var(--t-line);
+}
+.arr { position: absolute; color: rgba(255,255,255,.65); font-size: 22px; line-height: 1; }
+.arr.on { color: #fff; text-shadow: 0 0 8px var(--accent); }
+.arr.up { top: 10px; left: 50%; transform: translateX(-50%); }
+.arr.down { bottom: 10px; left: 50%; transform: translateX(-50%); }
+.arr.left { left: 12px; top: 50%; transform: translateY(-50%); }
+.arr.right { right: 12px; top: 50%; transform: translateY(-50%); }
+
+.t-btn.face { position: absolute; width: 64px; height: 64px; border-radius: 50%; font-size: 26px; }
+.t-btn.tri { top: 0; left: 50%; margin-left: -32px; }
+.t-btn.crs { bottom: 0; left: 50%; margin-left: -32px; }
+.t-btn.sqr { left: 0; top: 50%; margin-top: -32px; }
+.t-btn.cir { right: 0; top: 50%; margin-top: -32px; }
+
+.t-center { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 24px); transform: translateX(-50%); display: flex; gap: 14px; }
+
+/* Kleinere Bildschirme (Hochformat, Handy) */
+@media (max-height: 620px) {
+  .t-stick { width: 110px; height: 110px; }
+  .t-dpad { width: 100px; height: 100px; }
+  .t-dpad-pos { bottom: calc(env(safe-area-inset-bottom) + 140px); }
+  .t-face-pos { bottom: calc(env(safe-area-inset-bottom) + 130px); transform: scale(.8); transform-origin: bottom right; }
+}

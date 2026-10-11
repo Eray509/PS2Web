@@ -61,3 +61,7 @@ html, body {
   inset: 0;
   pointer-events: none;
 }
+
+/* Touch-Geräte: kein Scrollen, Zoomen oder Textmarkieren, solange gespielt wird. */
+html, body { overscroll-behavior: none; }
+#app { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }

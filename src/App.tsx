@@ -4,6 +4,7 @@ import { PlayModule, saveNow } from './PlayModule';
 import { useAppDispatch, useAppSelector, bootFile } from "./Actions";
 import { resumeAudio } from './audioUnlock';
 import { startGamepad, GamepadStatus } from './gamepad';
+import TouchControls from './TouchControls';
 import { defaultSettings, loadSettings, saveSettings, Settings } from './settings';
 
 const ACCEPTED = ".iso,.cso,.chd,.isz,.bin,.elf";
@@ -50,6 +51,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [idle, setIdle] = useState(false);
+  const wakeRef = useRef<() => void>(() => undefined);
   const dragDepth = useRef(0);
 
   const ready = PlayModule !== null;
@@ -95,12 +97,18 @@ function App() {
       return;
     }
     let timer = 0;
-    const wake = () => {
+    const wake = (event?: Event) => {
+      // Berührungen der Bildschirm-Steuerung sollen die Leiste nicht einblenden.
+      const target = event && (event.target as HTMLElement | null);
+      if (target && target.closest && target.closest(".touch-layer")) {
+        return;
+      }
       setIdle((current) => (current ? false : current));
       window.clearTimeout(timer);
       timer = window.setTimeout(() => setIdle(true), 3000);
     };
     wake();
+    wakeRef.current = () => wake();
     window.addEventListener("mousemove", wake);
     window.addEventListener("mousedown", wake);
     window.addEventListener("touchstart", wake);
@@ -190,15 +198,28 @@ function App() {
   };
 
   const toggleFullscreen = () => {
-    const app = document.getElementById("app");
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => undefined);
+    const app = document.getElementById("app") as any;
+    const doc = document as any;
+    if (document.fullscreenElement || doc.webkitFullscreenElement) {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => undefined);
+      } else if (doc.webkitExitFullscreen) {
+        doc.webkitExitFullscreen();
+      }
     } else if (app && app.requestFullscreen) {
       app.requestFullscreen().then(focusCanvas).catch(() => setError("Vollbild wird vom Browser blockiert."));
+    } else if (app && app.webkitRequestFullscreen) {
+      app.webkitRequestFullscreen();
+    } else {
+      setError("Vollbild geht hier nicht. Tipp: Teilen-Symbol → „Zum Home-Bildschirm“, dann von dort öffnen.");
     }
   };
 
   const playing = gameName !== null && !loadFailed;
+  const isTouchDevice =
+    typeof window !== "undefined" &&
+    ((window.matchMedia && window.matchMedia("(pointer: coarse)").matches) || navigator.maxTouchPoints > 1);
+  const showTouch = playing && (settings.touchControls === "on" || (settings.touchControls === "auto" && isTouchDevice));
   const fpsClass = fps >= 50 ? "good" : fps >= 30 ? "ok" : "bad";
 
   return (
@@ -290,6 +311,17 @@ function App() {
             </select>
           </label>
           <label className="row">
+            <span>Touch-Steuerung</span>
+            <select
+              value={settings.touchControls}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => setSettings({ ...settings, touchControls: e.target.value as Settings["touchControls"] })}
+            >
+              <option value="auto">Automatisch (Touch-Geräte)</option>
+              <option value="on">Immer an</option>
+              <option value="off">Aus</option>
+            </select>
+          </label>
+          <label className="row">
             <span>Bild glätten</span>
             <input
               type="checkbox"
@@ -342,6 +374,8 @@ function App() {
           <button className="btn ghost" onClick={() => setSettings(defaultSettings)}>Zurücksetzen</button>
         </aside>
       )}
+
+      {showTouch && <TouchControls onMenu={() => wakeRef.current()} />}
 
       {dragging && (
         <div className="drop">
