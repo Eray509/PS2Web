@@ -100,6 +100,22 @@ function App() {
     }
   }, [settings.audioBuffer, ready]);
 
+  // Weiche Texturen sofort anwenden. Die Auflösung gilt erst nach dem Neuladen der Seite.
+  const activeScale = useRef(settings.quality === "high" ? 2 : 1);
+  const needsReload = (settings.quality === "high" ? 2 : 1) !== activeScale.current;
+  useEffect(() => {
+    if (PlayModule && typeof PlayModule.setBilinear === "function") {
+      PlayModule.setBilinear(settings.quality !== "standard");
+    }
+  }, [settings.quality, ready]);
+
+  // Takt der emulierten CPU (weniger Takt = weniger Rechenaufwand pro Bild).
+  useEffect(() => {
+    if (PlayModule && typeof PlayModule.setEeScale === "function") {
+      PlayModule.setEeScale(settings.eeScale);
+    }
+  }, [settings.eeScale, ready]);
+
   // Leiste und Mauszeiger blenden sich im Spiel nach 3 Sekunden ohne Bewegung aus.
   const playingNow = gameName !== null && !loadFailed;
   useEffect(() => {
@@ -505,7 +521,7 @@ function App() {
       )}
 
       {playing && fps > 0 && fps < 30 && settings.showFps && (
-        <div className="toast">Wenig Bilder pro Sekunde. Schließe andere Tabs und nutze Chrome oder Edge.</div>
+        <div className="toast">Wenig Bilder pro Sekunde. Probiere Einstellungen → Emulations-Last niedriger, schließe andere Tabs und nutze Chrome oder Edge.</div>
       )}
       {error && <div className="toast" onClick={() => setError(null)}>{error}</div>}
 
@@ -580,6 +596,38 @@ function App() {
               <option value="16:9">16:9 (gestreckt)</option>
             </select>
           </label>
+          <label className="row">
+            <span>Bildqualität</span>
+            <select
+              value={settings.quality}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => setSettings({ ...settings, quality: e.target.value as Settings["quality"] })}
+            >
+              <option value="standard">Standard</option>
+              <option value="soft">Weich (glatte Texturen)</option>
+              <option value="high">Hoch (2× Auflösung)</option>
+            </select>
+          </label>
+          <p className="note">
+            „Weich“ glättet Texturen und kostet kaum Leistung. „Hoch“ rechnet die Grafik mit doppelter Auflösung, das sieht deutlich schärfer aus, braucht aber eine starke Grafikkarte und kann die FPS senken.
+          </p>
+          {needsReload && (
+            <button className="btn" onClick={() => window.location.reload()}>Seite neu laden, damit „Hoch“ wirkt</button>
+          )}
+          <label className="row">
+            <span>Emulations-Last</span>
+            <select
+              value={settings.eeScale}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => setSettings({ ...settings, eeScale: Number(e.target.value) })}
+            >
+              <option value={100}>100 % (original)</option>
+              <option value={85}>85 %</option>
+              <option value={70}>70 %</option>
+              <option value={50}>50 % (sehr sparsam)</option>
+            </select>
+          </label>
+          <p className="note">
+            Wenn die FPS unter 60 liegen: Weniger Prozent bedeuten weniger Rechenaufwand pro Bild und damit mehr Tempo. Der Preis: Das Spiel selbst bekommt weniger CPU-Leistung und kann in belebten Szenen mit weniger eigenen Bildern laufen. Manche Spiele reagieren empfindlich oder hängen. Erst 85 % probieren.
+          </p>
           <label className="row">
             <span>Touch-Steuerung</span>
             <select

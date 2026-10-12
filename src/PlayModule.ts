@@ -1,5 +1,6 @@
 import Play from "./Play";
 import DiscImageDevice from "./DiscImageDevice";
+import { loadSettings } from "./settings";
 
 export let PlayModule : any = null;
 
@@ -92,6 +93,18 @@ export let initPlayModule = async function() {
     const mounted = await mountPersistentStorage();
 
     PlayModule.discImageDevice = new DiscImageDevice(PlayModule);
+    // Bildqualität: Die Auflösung muss vor dem Start des Emulators feststehen (Canvas und Grafik-Teil müssen zusammenpassen).
+    if (typeof PlayModule.setRenderScale === "function") {
+        const settings = loadSettings();
+        const scale = settings.quality === "high" ? 2 : 1;
+        PlayModule.setRenderScale(scale);
+        PlayModule.setBilinear(settings.quality !== "standard");
+        const canvas = document.getElementById("outputCanvas") as HTMLCanvasElement | null;
+        if (canvas) {
+            canvas.width = 640 * scale;
+            canvas.height = 480 * scale;
+        }
+    }
     PlayModule.ccall("initVm", "", [], []);
 
     // Prüfen, ob der Emulator seine Ordner wirklich dort angelegt hat (sonst stimmt der Pfad nicht).

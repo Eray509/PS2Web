@@ -6,11 +6,13 @@ export type Settings = {
     audioBuffer: number; // 1..8 Tonstücke (je ca. 100 ms), 1 = wie vorher
     touchControls: "auto" | "on" | "off";
     autoPause: boolean; // beim Tab-Wechsel pausieren
+    quality: "standard" | "soft" | "high"; // Standard = wie Play!, Weich = glatte Texturen, Hoch = zusätzlich 2x Auflösung
+    eeScale: number; // Takt der emulierten CPU in Prozent (100 = original)
 };
 
 const KEY = "ps2web.settings.v1";
 
-export const defaultSettings: Settings = { aspect: "4:3", smooth: true, showFps: true, fieldShift: 0, audioBuffer: 3, touchControls: "auto", autoPause: true };
+export const defaultSettings: Settings = { aspect: "4:3", smooth: true, showFps: true, fieldShift: 0, audioBuffer: 3, touchControls: "auto", autoPause: true, quality: "soft", eeScale: 100 };
 
 export function loadSettings(): Settings {
     try {
