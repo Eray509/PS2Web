@@ -51,6 +51,9 @@ jobs:
       - name: Spielsteuerung (Savestates, Pause, Tempo)
         run: python3 ./scripts/apply-vmcontrol-patch.py Play-
 
+      - name: Bildqualität und Emulations-Last
+        run: python3 ./scripts/apply-quality-patch.py Play-
+
       - name: WebAssembly bauen
         working-directory: Play-
         run: |
