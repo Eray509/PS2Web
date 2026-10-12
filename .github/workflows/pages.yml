@@ -48,6 +48,9 @@ jobs:
       - name: Ton-Puffer
         run: python3 ./scripts/apply-audio-patch.py Play-
 
+      - name: Spielsteuerung (Savestates, Pause, Tempo)
+        run: python3 ./scripts/apply-vmcontrol-patch.py Play-
+
       - name: WebAssembly bauen
         working-directory: Play-
         run: |
