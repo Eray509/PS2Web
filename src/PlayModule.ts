@@ -13,7 +13,7 @@ let module_overrides = {
 
 // Der Emulator legt Memory Cards, Einstellungen und Spielstände unter $HOME/.local/share/Play Data Files ab.
 // Emscripten setzt HOME standardmässig auf /home/web_user. Dieses Verzeichnis binden wir an IndexedDB an.
-const DATA_DIR = "/home/web_user/.local/share/Play Data Files";
+export const DATA_DIR = "/home/web_user/.local/share/Play Data Files";
 const AUTOSAVE_INTERVAL_MS = 8000;
 
 function syncFs(populate: boolean): Promise<boolean> {

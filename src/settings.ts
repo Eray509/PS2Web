@@ -5,11 +5,12 @@ export type Settings = {
     fieldShift: number; // -4..4 Pixel, 0 = aus
     audioBuffer: number; // 1..8 Tonstücke (je ca. 100 ms), 1 = wie vorher
     touchControls: "auto" | "on" | "off";
+    autoPause: boolean; // beim Tab-Wechsel pausieren
 };
 
 const KEY = "ps2web.settings.v1";
 
-export const defaultSettings: Settings = { aspect: "4:3", smooth: true, showFps: true, fieldShift: 0, audioBuffer: 3, touchControls: "auto" };
+export const defaultSettings: Settings = { aspect: "4:3", smooth: true, showFps: true, fieldShift: 0, audioBuffer: 3, touchControls: "auto", autoPause: true };
 
 export function loadSettings(): Settings {
     try {

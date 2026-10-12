@@ -5,6 +5,8 @@ import { useAppDispatch, useAppSelector, bootFile } from "./Actions";
 import { resumeAudio } from './audioUnlock';
 import { startGamepad, GamepadStatus } from './gamepad';
 import TouchControls from './TouchControls';
+import { vmControlAvailable, pauseGame, resumeGame, setSpeed, makeGameKey, slotInfo, saveState, loadState, SLOT_COUNT } from './vmControl';
+import { exportMemoryCards, importMemoryCards, downloadBlob } from './memcard';
 import { defaultSettings, loadSettings, saveSettings, Settings } from './settings';
 
 const ACCEPTED = ".iso,.cso,.chd,.isz,.bin,.elf";
@@ -21,7 +23,14 @@ const CONTROLS: Array<[string, string]> = [
   ["R1 / R2 / R3", "8 / 9 / 0"],
   ["Start", "Enter"],
   ["Select", "Rücktaste"],
+  ["Schnellspeichern (Slot 1)", "F5"],
+  ["Schnellladen (Slot 1)", "F9"],
+  ["Pause / Weiter", "P"],
+  ["Vorlauf (halten)", "Tab"],
 ];
+
+const SPEEDS = [100, 200, 300, 1000];
+const speedLabel = (percent: number) => (percent >= 1000 ? "Max" : percent / 100 + "×");
 
 function Fps({ onValue }: { onValue: (fps: number) => void }) {
   useEffect(() => {
@@ -46,7 +55,17 @@ function App() {
   const [gamepad, setGamepad] = useState<GamepadStatus>({ connected: false, name: "" });
   const [gameName, setGameName] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [panel, setPanel] = useState<null | "controls" | "settings">(null);
+  const [panel, setPanel] = useState<null | "controls" | "settings" | "states">(null);
+  const [paused, setPaused] = useState(false);
+  const [speed, setSpeedState] = useState(100);
+  const [busy, setBusy] = useState(false);
+  const pausedRef = useRef(false);
+  const autoPausedRef = useRef(false);
+  const speedRef = useRef(100);
+  const holdPrevSpeed = useRef<number | null>(null);
+  const busyRef = useRef(false);
+  const gameKeyRef = useRef<string | null>(null);
+  const importRef = useRef<HTMLInputElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +161,193 @@ function App() {
     }
   };
 
+  const notify = useCallback((message: string) => {
+    setError(message);
+    window.setTimeout(() => setError((current) => (current === message ? null : current)), 3500);
+  }, []);
+
+  const applyPause = useCallback((value: boolean) => {
+    pausedRef.current = value;
+    setPaused(value);
+    if (value) {
+      pauseGame();
+    } else {
+      resumeGame();
+    }
+  }, []);
+
+  const togglePause = useCallback(() => {
+    if (!vmControlAvailable() || gameKeyRef.current === null) {
+      return;
+    }
+    autoPausedRef.current = false;
+    applyPause(!pausedRef.current);
+  }, [applyPause]);
+
+  const applySpeed = useCallback((percent: number) => {
+    speedRef.current = percent;
+    setSpeedState(percent);
+    setSpeed(percent);
+  }, []);
+
+  const cycleSpeed = useCallback(() => {
+    if (!vmControlAvailable()) {
+      return;
+    }
+    const index = SPEEDS.indexOf(speedRef.current);
+    applySpeed(SPEEDS[(index + 1) % SPEEDS.length]);
+  }, [applySpeed]);
+
+  const doSave = useCallback(
+    async (slot: number) => {
+      const key = gameKeyRef.current;
+      if (!key || busyRef.current) {
+        return;
+      }
+      busyRef.current = true;
+      setBusy(true);
+      try {
+        const ok = await saveState(key, slot);
+        notify(ok ? `Gespeichert in Slot ${slot}.` : "Speichern fehlgeschlagen.");
+      } catch (e) {
+        notify("Speichern fehlgeschlagen.");
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
+      }
+    },
+    [notify]
+  );
+
+  const doLoad = useCallback(
+    async (slot: number) => {
+      const key = gameKeyRef.current;
+      if (!key || busyRef.current) {
+        return;
+      }
+      busyRef.current = true;
+      setBusy(true);
+      try {
+        const ok = await loadState(key, slot);
+        notify(ok ? `Slot ${slot} geladen.` : "Laden fehlgeschlagen (Slot leer?).");
+      } catch (e) {
+        notify("Laden fehlgeschlagen.");
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
+      }
+    },
+    [notify]
+  );
+
+  // Tastenkürzel: F5 speichern, F9 laden, P Pause, Tab halten = Vorlauf.
+  useEffect(() => {
+    if (!playingNow) {
+      return;
+    }
+    const ignore = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      return (
+        e.ctrlKey || e.metaKey || e.altKey ||
+        (!!target && (target.tagName === "INPUT" || target.tagName === "SELECT" || target.tagName === "TEXTAREA"))
+      );
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (ignore(e)) {
+        return;
+      }
+      if (e.code === "Tab") {
+        e.preventDefault();
+        if (!e.repeat && holdPrevSpeed.current === null && vmControlAvailable()) {
+          holdPrevSpeed.current = speedRef.current;
+          applySpeed(300);
+        }
+        return;
+      }
+      if (e.repeat) {
+        return;
+      }
+      if (e.code === "F5") {
+        e.preventDefault();
+        doSave(1);
+      } else if (e.code === "F9") {
+        e.preventDefault();
+        doLoad(1);
+      } else if (e.code === "KeyP") {
+        e.preventDefault();
+        togglePause();
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "Tab" && holdPrevSpeed.current !== null) {
+        e.preventDefault();
+        const previous = holdPrevSpeed.current;
+        holdPrevSpeed.current = null;
+        applySpeed(previous);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [playingNow, applySpeed, doSave, doLoad, togglePause]);
+
+  // Beim Wechsel in einen anderen Tab pausieren und danach automatisch weiterspielen.
+  useEffect(() => {
+    if (!playingNow || !settings.autoPause) {
+      return;
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        if (!pausedRef.current && vmControlAvailable()) {
+          autoPausedRef.current = true;
+          applyPause(true);
+        }
+      } else if (autoPausedRef.current) {
+        autoPausedRef.current = false;
+        if (pausedRef.current) {
+          applyPause(false);
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [playingNow, settings.autoPause, applyPause]);
+
+  const doExport = () => {
+    if (!ready) {
+      return;
+    }
+    try {
+      const blob = exportMemoryCards();
+      if (!blob) {
+        notify("Keine Spielstände gefunden. Speichere erst im Spiel.");
+        return;
+      }
+      const d = new Date();
+      const two = (n: number) => (n < 10 ? "0" + n : "" + n);
+      downloadBlob(blob, `ps2web-memorycard-${d.getFullYear()}${two(d.getMonth() + 1)}${two(d.getDate())}.zip`);
+    } catch (e) {
+      notify("Export fehlgeschlagen.");
+    }
+  };
+
+  const onImportPick = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = "";
+    if (!file || !ready) {
+      return;
+    }
+    try {
+      const result = await importMemoryCards(file);
+      notify(`${result.written} Dateien importiert` + (result.skipped ? `, ${result.skipped} übersprungen.` : "."));
+    } catch (e: any) {
+      notify("Import fehlgeschlagen: " + (e && e.message ? e.message : "unbekannter Fehler"));
+    }
+  };
+
   const start = useCallback(
     (file: File) => {
       if (!ready) {
@@ -150,6 +356,13 @@ function App() {
       setError(null);
       resumeAudio();
       setGameName(file.name.replace(/\.[^.]+$/, ""));
+      gameKeyRef.current = makeGameKey(file);
+      autoPausedRef.current = false;
+      pausedRef.current = false;
+      setPaused(false);
+      speedRef.current = 100;
+      setSpeedState(100);
+      setSpeed(100);
       dispatch(bootFile(file));
       setPanel(null);
       setTimeout(focusCanvas, 50);
@@ -231,6 +444,7 @@ function App() {
       onDrop={onDrop}
     >
       <input ref={inputRef} type="file" accept={ACCEPTED} hidden onChange={onPick} />
+      <input ref={importRef} type="file" accept=".zip,application/zip" hidden onChange={onImportPick} />
       {ready && <Fps onValue={setFps} />}
 
       <header className={"bar" + (playing ? " compact" : "")}>
@@ -246,6 +460,15 @@ function App() {
         {gamepad.connected && <span className="pill pad" title={gamepad.name}>🎮 Controller</span>}
         {playing && ready && PlayModule.persistActive && (
           <span className="pill pad" title="Spielstände werden automatisch in diesem Browser gespeichert">💾 Autospeichern</span>
+        )}
+        {playing && vmControlAvailable() && (
+          <>
+            <button className="btn ghost" onClick={togglePause} title="Pause (P)">{paused ? "▶ Weiter" : "⏸ Pause"}</button>
+            <button className="btn ghost" onClick={cycleSpeed} title="Tempo wechseln (Tab halten = Vorlauf)">⏩ {speedLabel(speed)}</button>
+          </>
+        )}
+        {ready && (
+          <button className="btn ghost" onClick={() => setPanel(panel === "states" ? null : "states")}>💾 Spielstände</button>
         )}
         <button className="btn" onClick={() => inputRef.current?.click()} disabled={!ready}>
           {playing ? "Anderes Spiel" : "Spiel laden"}
@@ -272,10 +495,57 @@ function App() {
         </main>
       )}
 
+      {playing && paused && (
+        <div className="pause-overlay" onClick={togglePause}>
+          <div className="pause-box">
+            ⏸ Pausiert
+            <small>Antippen oder P drücken zum Fortsetzen</small>
+          </div>
+        </div>
+      )}
+
       {playing && fps > 0 && fps < 30 && settings.showFps && (
         <div className="toast">Wenig Bilder pro Sekunde. Schließe andere Tabs und nutze Chrome oder Edge.</div>
       )}
       {error && <div className="toast" onClick={() => setError(null)}>{error}</div>}
+
+      {panel === "states" && (
+        <aside className="panel" role="dialog" aria-label="Spielstände">
+          <div className="panel-head">
+            <h2>Spielstände</h2>
+            <button className="x" onClick={() => setPanel(null)} aria-label="Schließen">×</button>
+          </div>
+          {playing && vmControlAvailable() ? (
+            <>
+              {Array.from({ length: SLOT_COUNT }, (_, i) => i + 1).map((slot) => {
+                const key = gameKeyRef.current;
+                const info = key ? slotInfo(key, slot) : { exists: false, time: null, size: 0 };
+                return (
+                  <div className="slot" key={slot}>
+                    <div>
+                      <strong>Slot {slot}</strong>
+                      <small>{info.exists && info.time ? info.time.toLocaleString("de-DE") + " · " + Math.round(info.size / 1048576) + " MB" : "leer"}</small>
+                    </div>
+                    <div className="slot-actions">
+                      <button className="btn ghost" disabled={busy} onClick={() => doSave(slot)}>Speichern</button>
+                      <button className="btn ghost" disabled={busy || !info.exists} onClick={() => doLoad(slot)}>Laden</button>
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="note">Savestates speichern den genauen Zustand des Spiels, auch mitten im Level. Schnell: F5 speichert, F9 lädt Slot 1. {ready && PlayModule.persistActive ? "Sie bleiben in diesem Browser erhalten." : "Dauerhaftes Speichern ist gerade nicht aktiv: Sie gehen beim Neuladen verloren."}</p>
+            </>
+          ) : (
+            <p className="note">Savestates gibt es, sobald ein Spiel läuft (und der Emulator damit gebaut wurde).</p>
+          )}
+          <h3 className="sub">Memory Card</h3>
+          <div className="slot-actions wide">
+            <button className="btn ghost" onClick={doExport} disabled={!ready}>Exportieren (ZIP)</button>
+            <button className="btn ghost" onClick={() => importRef.current?.click()} disabled={!ready}>Importieren …</button>
+          </div>
+          <p className="note">Sichert die normalen Spielstände (Speichern im Spiel) als Datei oder spielt sie wieder ein, zum Beispiel nach dem Löschen der Browserdaten oder auf einem anderen Gerät. Am besten vor dem Start eines Spiels importieren, ein laufendes Spiel merkt es sonst eventuell nicht.</p>
+        </aside>
+      )}
 
       {panel === "controls" && (
         <aside className="panel" role="dialog" aria-label="Steuerung">
@@ -355,6 +625,14 @@ function App() {
             />
           </label>
           <p className="note">Gegen Ruckeln und Knacken beim Ton. Höher = stabiler, aber der Ton kommt später. Bei Ruckeln erhöhen, bei Spielen mit Takt oder Rhythmus eher niedrig lassen. Wirkt ab dem nächsten Neustart des Tons (Spiel kurz pausieren oder neu laden). Bleibt der Ton trotzdem unruhig, schau auf die FPS-Anzeige: Unter 60 ist die Emulation selbst zu langsam, das kann der Puffer nicht beheben.</p>
+          <label className="row">
+            <span>Beim Tab-Wechsel pausieren</span>
+            <input
+              type="checkbox"
+              checked={settings.autoPause}
+              onChange={(e) => setSettings({ ...settings, autoPause: e.target.checked })}
+            />
+          </label>
           <label className="row">
             <span>FPS anzeigen</span>
             <input
